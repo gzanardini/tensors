@@ -33,7 +33,11 @@ G = TIC_1;
 G(2:5,2:5,2:5,:) = TIC_2;
 G(2:5,6:9,6:9,:) = TIC_3;
 
-
+%%  TIC curves
+figure
+hold('on')
+plot(squeeze(G(3,3,3,:)))
+plot(squeeze(G(3,7,7,:)))
 
 %% Slicing volume visual
 
