@@ -19,7 +19,7 @@ k_2 = 0.55 + 0.10 .*randn(4,4,4);
 mu_2 = 4.5/k_2 ;  
 alpha_2 = 0.52;   
 
-k_3 = 0.7 + 0.10.*randn(4,4,4);  
+k_3 = 0.8 + 0.10.*randn(4,4,4);  
 mu_3 = 6/k_3;    
 alpha_3 = 0.6;  
 
@@ -34,10 +34,13 @@ G(2:5,2:5,2:5,:) = TIC_2;
 G(2:5,6:9,6:9,:) = TIC_3;
 
 %%  TIC curves
-figure
+
+figure;
 hold('on')
-plot(squeeze(G(3,3,3,:)))
-plot(squeeze(G(3,7,7,:)))
+
+plot(squeeze(G(3,3,3,:)),DisplayName='TIC 2')
+plot(squeeze(G(3,7,7,:)),DisplayName='TIC 3')
+legend()
 
 %% Slicing volume visual
 
@@ -100,5 +103,7 @@ log_Y=log(Y*1e6);
 figure;
 hist=histogram(log_Y,'Normalization','pdf');
 [Ns, Edges]=histcounts(log_Y,'Normalization','probability');
+
+
 
 
