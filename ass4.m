@@ -87,7 +87,7 @@ title('Original signal at 16sec')
 
 
 %% Noise
-noise_param = 10^-4;
+noise_param = 10^-2;
 N = raylrnd(noise_param, [10,10,10,length(t_samples)]);
 SNR = snr(G, N)
 Y = (G).*N; 
@@ -147,7 +147,8 @@ xtickangle(45);
 %% Reconstruction
 
 [C,U1,U2,U3,U4]=mlsvd_4d(log_Y);
-rx = 3; ry = 3; rz = 3; rt = 5;
+rx = 3; ry = 4; rz = 4; rt = 4;
+%rx = 10; ry = 10; rz = 10; rt = 30;
 
 % Truncation
 U1t = U1(:,1:rx); 
@@ -156,7 +157,7 @@ U3t = U3(:,1:rz);
 U4t = U4(:,1:rt);
 Ct = C(1:rx,1:ry,1:rz,1:rt);
 
-rec_logY=mode_n_product(log_Y,(U1t*U1t')',1);
+rec_logY=mode_n_product(log_Y,(U1t*U1t'),1);
 rec_logY=mode_n_product(rec_logY,(U2t*U2t'),2);
 rec_logY=mode_n_product(rec_logY,(U3t*U3t'),3);
 rec_logY=mode_n_product(rec_logY,(U4t*U4t'),4);
@@ -166,7 +167,34 @@ G_hat=exp(rec_logY);
 MSE=norm(G_hat-G,'fro')/norm(G,'fro');
 disp(MSE)
 
+%% Variation of reconstruction
+
+rec_logY=mode_n_product(Ct,U1t,1);
+rec_logY=mode_n_product(rec_logY,U2t,2);
+rec_logY=mode_n_product(rec_logY,U3t,3);
+rec_logY=mode_n_product(rec_logY,U4t,4);
+
+G_hat=exp(rec_logY);
+
+MSE=norm(G_hat-G,'fro')/norm(G,'fro');
+disp(MSE)
 
 
+%% Signal visualization
+G_test=G_hat(:,:,:,6);      % for noisy use Y
+x=0:1:9;
+y=0:1:9;
+z=0:1:9;
 
+[x,y,z]=meshgrid(x,y,z);
 
+xslice = [3,3,3];    % location of y-z planes
+yslice = 3;          % location of x-z plane
+zslice = [2,0];         % location of x-y planes
+
+figure();
+slice(x,y,z,G_test,xslice,yslice,zslice)
+xlabel('x')
+ylabel('y')
+zlabel('z')
+title('Original signal at 16sec')
