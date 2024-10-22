@@ -3,9 +3,9 @@
 t_samples = (0:4:120)+eps;
 
 TIC_1 = zeros(10,10,10, length(t_samples));
-k_1 = 0.2.*ones(10,10,10); % 0.2.*abs(randn(10,10,10));          % local diffusion-related parameter (0.35<)
+k_1 = 0.5.*ones(10,10,10); % 0.2.*abs(randn(10,10,10));          % local diffusion-related parameter (0.35<)
 mu_1 = 2.5/k_1 ;    % mean transit time (lambda/k)
-alpha_1 = 1;        % scale parameter ()
+alpha_1 = 1000;        % scale parameter ()
 
 for idx = 1:length(t_samples) %TIC1
     t = t_samples(idx);  
@@ -17,11 +17,11 @@ TIC_3 = zeros(4,4,4, length(t_samples));
 
 k_2 = 3.*ones(4,4,4); % 0.55 + 0.10 .*randn(4,4,4);  
 mu_2 = 4.5/k_2 ;  
-alpha_2 = 0.52;   
+alpha_2 = 1600;   
 
 k_3 = 2.*ones(4,4,4); %0.8 + 0.10.*randn(4,4,4);  
 mu_3 = 6/k_3;    
-alpha_3 = 0.6;  
+alpha_3 = 1200;  
 
 for idx = 1:length(t_samples)
     t = t_samples(idx);  
@@ -48,46 +48,14 @@ hold('off')
 G_test=zeros(10,10,10);
 G_test(2:5,2:5,2:5,:) = 2;
 G_test(2:5,6:9,6:9,:) = 5;
-
-x=0:1:9;
-y=0:1:9;
-z=0:1:9;
-
-[x,y,z]=meshgrid(x,y,z);
-
-xslice = [3,3,3];    % location of y-z planes
-yslice = 3;          % location of x-z plane
-zslice = [2,0];         % location of x-y planes
-
-figure();
-slice(x,y,z,G_test,xslice,yslice,zslice)
-xlabel('x')
-ylabel('y')
-zlabel('z')
-title('Slices of the imaged volume - No time index')
+vol_viz(G_test,'Slices of the imaged volume - No time index')
 
 %% Signal visualization
 G_test=G(:,:,:,6);      % for noisy use Y
-x=0:1:9;
-y=0:1:9;
-z=0:1:9;
-
-[x,y,z]=meshgrid(x,y,z);
-
-xslice = [3,3,3];    % location of y-z planes
-yslice = 3;          % location of x-z plane
-zslice = [2,0];         % location of x-y planes
-
-figure();
-slice(x,y,z,G_test,xslice,yslice,zslice)
-xlabel('x')
-ylabel('y')
-zlabel('z')
-title('Original signal at 16sec')
-
+vol_viz(G_test, 'Original signal at 16sec')
 
 %% Noise
-noise_param = 10^-2;
+noise_param = 10^1;
 N = raylrnd(noise_param, [10,10,10,length(t_samples)]);
 SNR = snr(G, N)
 Y = (G).*N; 
@@ -179,22 +147,7 @@ G_hat=exp(rec_logY);
 MSE=norm(G_hat-G,'fro')/norm(G,'fro');
 disp(MSE)
 
+%errors are scaling with alpha
 
-%% Signal visualization
-G_test=G_hat(:,:,:,6);      % for noisy use Y
-x=0:1:9;
-y=0:1:9;
-z=0:1:9;
-
-[x,y,z]=meshgrid(x,y,z);
-
-xslice = [3,3,3];    % location of y-z planes
-yslice = 3;          % location of x-z plane
-zslice = [2,0];         % location of x-y planes
-
-figure();
-slice(x,y,z,G_test,xslice,yslice,zslice)
-xlabel('x')
-ylabel('y')
-zlabel('z')
-title('Original signal at 16sec')
+%%
+vol_viz(rec_logY(:,:,:,6), 'Reconstructed signal')
