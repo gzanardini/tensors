@@ -1,9 +1,9 @@
 %% Generating imaging domain
 
-t_samples = (4:4:120)+eps;
+t_samples = (0:4:120)+eps;
 
 TIC_1 = zeros(10,10,10, length(t_samples));
-k_1 = 0.2.*abs(randn(10,10,10));          % local diffusion-related parameter (0.35<)
+k_1 = 0.2.*ones(10,10,10); % 0.2.*abs(randn(10,10,10));          % local diffusion-related parameter (0.35<)
 mu_1 = 2.5/k_1 ;    % mean transit time (lambda/k)
 alpha_1 = 1;        % scale parameter ()
 
@@ -15,11 +15,11 @@ end
 TIC_2 = zeros(4,4,4, length(t_samples));
 TIC_3 = zeros(4,4,4, length(t_samples));
 
-k_2 = 0.55 + 0.10 .*randn(4,4,4);  
+k_2 = 3.*ones(4,4,4); % 0.55 + 0.10 .*randn(4,4,4);  
 mu_2 = 4.5/k_2 ;  
 alpha_2 = 0.52;   
 
-k_3 = 0.8 + 0.10.*randn(4,4,4);  
+k_3 = 2.*ones(4,4,4); %0.8 + 0.10.*randn(4,4,4);  
 mu_3 = 6/k_3;    
 alpha_3 = 0.6;  
 
@@ -37,7 +37,7 @@ G(2:5,6:9,6:9,:) = TIC_3;
 
 figure;
 hold('on')
-
+plot(squeeze(G(1,1,1,:)),DisplayName='TIC 1')
 plot(squeeze(G(3,3,3,:)),DisplayName='TIC 2')
 plot(squeeze(G(3,7,7,:)),DisplayName='TIC 3')
 legend()
@@ -89,15 +89,16 @@ title('Original signal at 16sec')
 %% Noise
 noise_param = 10^-4;
 N = raylrnd(noise_param, [10,10,10,length(t_samples)]);
-Y = (G+eps).*N; 
+SNR = snr(G, N)
+Y = (G).*N; 
 
 figure;
-histogram(Y*1e6,'Normalization','pdf')
+histogram(Y,'Normalization','pdf')
 xlabel('bins')
 ylabel('frequency')
 
 % Taking logarithm
-log_Y=log(Y);
+log_Y=log(Y+ eps);
 
 figure;
 hist=histogram(log_Y,'Normalization','pdf');
@@ -105,11 +106,11 @@ hist=histogram(log_Y,'Normalization','pdf');
 
 %% SVD -- Eqn 3
 Y_4 = mode_n_matricization(log_Y,4);
-[U_4, S_4, V_4] = svd(Y_4*Y_4', 'econ');
-plot(sqrt(diag(S_4)))
+[U_4, S_4, V_4] = svd(Y_4, 'econ');
+semilogy(diag(S_4))
 
 %% MLSVD -- Eqn 4
-[C,U1,U2,U3,U4]=mlsvd_4d(Y_4*Y_4');
+[C,U1,U2,U3,U4]=mlsvd_4d(log_Y);
 rx = 5; ry = 5; rz = 5; rt = 5;
 
 % Truncation
@@ -137,8 +138,35 @@ counts = histcounts(idx, unique(idx));
 
 figure;
 bar(counts);
-set(gca, 'XTickLabel', uniqueVectors); % Label each bar with the unique vector
+set(gca, 'XTickLabel', uniqueVectors); 
 xlabel('Unique Vectors');
 ylabel('Frequency');
 title('Histogram of Unique Vectors');
-xtickangle(45); % Rotate labels if needed for better readability
+xtickangle(45); 
+
+%% Reconstruction
+
+[C,U1,U2,U3,U4]=mlsvd_4d(log_Y);
+rx = 3; ry = 3; rz = 3; rt = 5;
+
+% Truncation
+U1t = U1(:,1:rx); 
+U2t = U2(:,1:ry); 
+U3t = U3(:,1:rz); 
+U4t = U4(:,1:rt);
+Ct = C(1:rx,1:ry,1:rz,1:rt);
+
+rec_logY=mode_n_product(log_Y,(U1t*U1t')',1);
+rec_logY=mode_n_product(rec_logY,(U2t*U2t'),2);
+rec_logY=mode_n_product(rec_logY,(U3t*U3t'),3);
+rec_logY=mode_n_product(rec_logY,(U4t*U4t'),4);
+
+G_hat=exp(rec_logY);
+
+MSE=norm(G_hat-G,'fro')/norm(G,'fro');
+disp(MSE)
+
+
+
+
+
