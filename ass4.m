@@ -120,7 +120,16 @@ U4t = U4(:,1:rt);
 Ct = C(1:rx,1:ry,1:rz,1:rt);
 
 %% Score Alg
+rhos = 0.0001:0.0001:0.01;
+n_trials = length(rhos);
+ranks=cell(n_trials,1);
 
+for i=1:n_trials
+    ranks{i} = score(log_Y, rhos(i))';
+    display(num2str(ranks{i}));
 
+end
+%%
+histogram(ranks)
 
 
