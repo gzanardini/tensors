@@ -1,6 +1,6 @@
 %% Generating imaging domain
 
-t_samples = (0:4:120)+eps;
+t_samples = (4:4:120)+eps;
 
 TIC_1 = zeros(10,10,10, length(t_samples));
 k_1 = 0.2.*abs(randn(10,10,10));          % local diffusion-related parameter (0.35<)
@@ -38,6 +38,7 @@ figure
 hold('on')
 plot(squeeze(G(3,3,3,:)))
 plot(squeeze(G(3,7,7,:)))
+hold('off')
 
 %% Slicing volume visual
 
@@ -62,7 +63,7 @@ ylabel('y')
 zlabel('z')
 title('Slices of the imaged volume - No time index')
 
-%% Slicing volume visual
+%% Signal visualization
 G_test=G(:,:,:,6);      % for noisy use Y
 x=0:1:9;
 y=0:1:9;
@@ -85,20 +86,36 @@ title('Original signal at 16sec')
 %% Noise
 noise_param = 10^-4;
 N = raylrnd(noise_param, [10,10,10,length(t_samples)]);
-Y = G.*N; 
+Y = (G+eps).*N; 
 
 figure;
 histogram(Y*1e6,'Normalization','pdf')
 xlabel('bins')
 ylabel('frequency')
 
-
-
-
-log_Y=log(Y*1e6);
+% Taking logarithm
+log_Y=log(Y);
 
 figure;
 hist=histogram(log_Y,'Normalization','pdf');
 [Ns, Edges]=histcounts(log_Y,'Normalization','probability');
+
+%% SVD -- Eqn 3
+Y_4 = mode_n_matricization(log_Y,4);
+[U_4, S_4, V_4] = svd(Y_4*Y_4', 'econ');
+plot(sqrt(diag(S_4)))
+
+%% MLSVD -- Eqn 4
+[C,U1,U2,U3,U4]=mlsvd_4d(Y_4*Y_4');
+rx = 5; ry = 5; rz = 5; rt = 5;
+
+% Truncation
+U1t = U1(:,1:rx); 
+U2t = U2(:,1:ry); 
+U3t = U3(:,1:rz); 
+U4t = U4(:,1:rt);
+Ct = C(1:rx,1:ry,1:rz,1:rt);
+
+%% Score Alg
 
 
