@@ -130,6 +130,15 @@ for i=1:n_trials
 
 end
 %%
-histogram(ranks)
+string_ranks = cellfun(@(v) mat2str(v), ranks, 'UniformOutput', false);
 
+[uniqueVectors, ~, idx] = unique(string_ranks);
+counts = histcounts(idx, unique(idx));
 
+figure;
+bar(counts);
+set(gca, 'XTickLabel', uniqueVectors); % Label each bar with the unique vector
+xlabel('Unique Vectors');
+ylabel('Frequency');
+title('Histogram of Unique Vectors');
+xtickangle(45); % Rotate labels if needed for better readability
