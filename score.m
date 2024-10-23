@@ -20,10 +20,13 @@ for i = 1:ndims(X)
     for h = 1:size(H_i, 2)
         u_j(h) = H_i(:, h)' * H_i(:, h); 
     end
-    [~, u_j_soted] = sort(u_j, 'descend');  % Sort u_j in descending order
+    [~, u_j_sorted] = sort(u_j, 'descend');  % Sort u_j in descending order
+
     threshold = ceil(rho * prod(sz) / size(X, i));
-    P_G = H_i(:, u_j_soted(1:threshold));
+    P_G = H_i(:, u_j_sorted(1:threshold));
+
     tmp = (1 / threshold) * (P_G * P_G');
+
     lambda = diag(tmp);
     lambda = sort(lambda, 'descend');
 
@@ -39,8 +42,7 @@ for i = 1:ndims(X)
             denominator = denominator + (1 / (size(X, i) - r)) * lambda(m);
         end
         
-        min_rank_val_new = -2 * log((nominator / denominator)^(threshold * (size(X, i) - r))) + ...
-            r * (2 * size(X, i) - r) * log(threshold);
+        min_rank_val_new = -2 * log((nominator / denominator)^(threshold * (size(X, i) - r))) + r * (2 * size(X, i) - r) * log(threshold);
         
         if min_rank_val_new < min_rank_val
             min_rank = r;
