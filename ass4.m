@@ -55,9 +55,9 @@ G_test=G(:,:,:,6);      % for noisy use Y
 vol_viz(G_test, 'Original signal at 16sec')
 
 %% Noise
-noise_param = 10^1;
+noise_param = 10^-2;
 N = raylrnd(noise_param, [10,10,10,length(t_samples)]);
-SNR = snr(G, N)
+SNR = snr(G, N);
 Y = (G).*N; 
 
 figure;
@@ -89,28 +89,44 @@ U4t = U4(:,1:rt);
 Ct = C(1:rx,1:ry,1:rz,1:rt);
 
 %% Score Alg
-rhos = 0.0001:0.0001:0.01;
+rhos = logspace(-4, -1, 100);
 n_trials = length(rhos);
 ranks=cell(n_trials,1);
 
 for i=1:n_trials
     ranks{i} = score(log_Y, rhos(i))';
-    display(num2str(ranks{i}));
+    %display(num2str(ranks{i}));
 
 end
 %%
-string_ranks = cellfun(@(v) mat2str(v), ranks, 'UniformOutput', false);
+string_ranks = cellfun(@(v) mat2str(v), reshape(ranks, [], 1), 'UniformOutput', false);
 
 [uniqueVectors, ~, idx] = unique(string_ranks);
 counts = histcounts(idx, unique(idx));
 
 figure;
-bar(counts);
+histogram(idx);
+xticks(1:1:size(uniqueVectors,1))
 set(gca, 'XTickLabel', uniqueVectors); 
 xlabel('Unique Vectors');
 ylabel('Frequency');
 title('Histogram of Unique Vectors');
 xtickangle(45); 
+
+%% For different noise realizations
+noise_param = 10^-2;
+rhos = logspace(-4, -1, 100);
+n_trials = length(rhos);
+ranks=cell(n_trials,100);
+
+for n = 1:100
+    for i = 1:length(rhos)
+        N = raylrnd(noise_param, [10,10,10,length(t_samples)]);
+        Y = (G).*N; 
+        log_Y=log(Y+ eps);
+        ranks{i,n} = score(log_Y, rhos(i))';
+    end
+end
 
 %% Reconstruction
 
