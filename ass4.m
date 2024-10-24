@@ -1,3 +1,7 @@
+close all;
+clear variables;
+clc;
+
 %% Generating imaging domain
 
 t_samples = (0:4:120)+eps;
@@ -37,6 +41,7 @@ G(2:5,6:9,6:9,:) = TIC_3;
 
 figure;
 hold('on')
+title('TIC Curves in each region')
 plot(squeeze(G(1,1,1,:)),DisplayName='TIC 1')
 plot(squeeze(G(3,3,3,:)),DisplayName='TIC 2')
 plot(squeeze(G(3,7,7,:)),DisplayName='TIC 3')
@@ -48,14 +53,16 @@ hold('off')
 G_test=zeros(10,10,10);
 G_test(2:5,2:5,2:5,:) = 2;
 G_test(2:5,6:9,6:9,:) = 5;
-vol_viz(G_test,'Slices of the imaged volume - No time index')
+vol_viz(G_test,'Imaged volume')
+
 
 %% Signal visualization
 G_test=G(:,:,:,6);      % for noisy use Y
 vol_viz(G_test, 'Original signal at 16sec')
 
+
 %% Noise
-noise_param = 10^-2;
+noise_param = 10^2;
 N = raylrnd(noise_param, [10,10,10,length(t_samples)]);
 SNR = snr(G, N);
 Y = (G).*N; 
@@ -150,7 +157,6 @@ G_hat=exp(rec_logY);
 
 MSE=norm(G_hat-G,'fro')/norm(G,'fro');
 disp(MSE)
-
 %% Variation of reconstruction
 
 rec_logY=mode_n_product(Ct,U1t,1);
