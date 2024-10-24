@@ -6,9 +6,9 @@ z=0:1:9;
 
 [x,y,z]=meshgrid(x,y,z);
 
-xslice = [3,3,3];    % location of y-z planes
-yslice = 3;          % location of x-z plane
-zslice = [2,0];         % location of x-y planes
+xslice = [3,3,7];    %[3,3,3]   % location of y-z planes
+yslice = 3;                     % location of x-z plane
+zslice = [2,0,7];    %[2,0]     % location of x-y planes
 
 figure();
 slice(x,y,z,G_test,xslice,yslice,zslice)
