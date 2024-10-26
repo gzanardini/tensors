@@ -62,7 +62,7 @@ vol_viz(G_test, 'Original signal at 16sec')
 
 
 %% Noise
-noise_param = 10^2;
+noise_param = 10^-1;
 N = raylrnd(noise_param, [10,10,10,length(t_samples)]);
 SNR = snr(G, N);
 Y = (G).*N; 
@@ -80,13 +80,13 @@ hist=histogram(log_Y,'Normalization','pdf');
 [Ns, Edges]=histcounts(log_Y,'Normalization','probability');
 
 %% SVD -- Eqn 3
-Y_4 = mode_n_matricization(log_Y,4);
+Y_4 = mode_n_matricization(log_Y, 4);
 [U_4, S_4, V_4] = svd(Y_4, 'econ');
-semilogy(diag(S_4))
+semilogy(diag(S_4), 'o-')
 
 %% MLSVD -- Eqn 4
 [C,U1,U2,U3,U4]=mlsvd_4d(log_Y);
-rx = 5; ry = 5; rz = 5; rt = 5;
+rx = 2; ry = 3; rz = 3; rt = 3;
 
 % Truncation
 U1t = U1(:,1:rx); 
@@ -96,7 +96,7 @@ U4t = U4(:,1:rt);
 Ct = C(1:rx,1:ry,1:rz,1:rt);
 
 %% Score Alg
-rhos = logspace(-4, -1, 100);
+rhos = logspace(-4, -3, 100);
 n_trials = length(rhos);
 ranks=cell(n_trials,1);
 
@@ -108,20 +108,15 @@ end
 %%
 string_ranks = cellfun(@(v) mat2str(v), reshape(ranks, [], 1), 'UniformOutput', false);
 
-[uniqueVectors, ~, idx] = unique(string_ranks);
-counts = histcounts(idx, unique(idx));
-
 figure;
-histogram(idx);
-xticks(1:1:size(uniqueVectors,1))
-set(gca, 'XTickLabel', uniqueVectors); 
+histogram(categorical(string_ranks)); 
 xlabel('Unique Vectors');
 ylabel('Frequency');
 title('Histogram of Unique Vectors');
 xtickangle(45); 
 
 %% For different noise realizations
-noise_param = 10^-2;
+noise_param = 10^-1;
 rhos = logspace(-4, -1, 100);
 n_trials = length(rhos);
 ranks=cell(n_trials,100);
@@ -172,4 +167,4 @@ disp(MSE)
 %errors are scaling with alpha
 
 %%
-vol_viz(rec_logY(:,:,:,6), 'Reconstructed signal')
+vol_viz(G_hat(:,:,:,6), 'Reconstructed signal')

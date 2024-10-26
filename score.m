@@ -4,15 +4,18 @@ sz = size(X);
 V = cell(ndims(X), 1);
 
 % Initialize eig vectors
+
 for n = 1:ndims(X)
     X_n = mode_n_matricization(X, n);
-    [V{n}, ~] = eig(X_n*X_n');
-    V{n} = (prod(sz)/sz(n)).*V{n};
+    [eig_vec, D] = eig((sz(n)/prod(sz)).*X_n*X_n');
+    [~, ind] = sort(diag(D));
+    V{n} = eig_vec(:,ind);
 end
+
 H = mode_n_product(X, V{1}', 1);
-H = mode_n_product(H, V{2}', 2);
-H = mode_n_product(H, V{3}', 3);
-H = mode_n_product(H, V{4}', 4);
+for n = 2:ndims(X)
+H = mode_n_product(H, V{n}', n);
+end
 
 for i = 1:ndims(X)
     H_i = mode_n_matricization(H, i);
