@@ -36,13 +36,13 @@ for i = 1:ndims(X)
     min_rank = size(X, i);  % Initialize minimum rank
     min_rank_val = 10^6;  % Initialize large minimum rank value
 
-    for r = 1:(size(X, i) - 1)
+    for r = 1:(size(X, i)) 
         denominator = 0;
         nominator = 1;
         
-        for m = r:size(X, i)
-            nominator = nominator * lambda(m)^(1 / (size(X, i) - r));
-            denominator = denominator + (1 / (size(X, i) - r)) * lambda(m);
+        for m = r:size(X, i)-1
+            nominator = nominator * lambda(m+1)^(1 / (size(X, i) - r));
+            denominator = denominator + (1 / (size(X, i) - r)) * lambda(m+1);
         end
         
         min_rank_val_new = -2 * log((nominator / denominator)^(threshold * (size(X, i) - r))) + r * (2 * size(X, i) - r) * log(threshold);
