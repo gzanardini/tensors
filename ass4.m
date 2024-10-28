@@ -7,8 +7,8 @@ clc;
 t_samples = (0:4:120)+eps;
 
 TIC_1 = zeros(10,10,10, length(t_samples));
-k_1 = 0.5.*ones(10,10,10); % 0.2.*abs(randn(10,10,10));          % local diffusion-related parameter (0.35<)
-mu_1 = 2.5/k_1 ;    % mean transit time (lambda/k)
+k_1 = 0.5 + 0.1.*randn(10,10,10);    %0.5.*ones(10,10,10);   % local diffusion-related parameter (0.35<)
+mu_1 = 30 + randn(10,10,10); % 2.5/k_1 ;    % mean transit time (lambda/k)
 alpha_1 = 1000;        % scale parameter ()
 
 for idx = 1:length(t_samples) %TIC1
@@ -19,12 +19,12 @@ end
 TIC_2 = zeros(4,4,4, length(t_samples));
 TIC_3 = zeros(4,4,4, length(t_samples));
 
-k_2 = 3.*ones(4,4,4); % 0.55 + 0.10 .*randn(4,4,4);  
-mu_2 = 4.5/k_2 ;  
+k_2 = 1 + 0.1.*randn(4,4,4);        %3.*ones(4,4,4); 
+mu_2 = 25 + randn(4,4,4);           % 4.5/k_2 ;  
 alpha_2 = 1600;   
 
-k_3 = 2.*ones(4,4,4); %0.8 + 0.10.*randn(4,4,4);  
-mu_3 = 6/k_3;    
+k_3 = 2 + 0.1.*randn(4,4,4);  
+mu_3 = 15 + randn(4,4,4);           % 6/k_3;    
 alpha_3 = 1200;  
 
 for idx = 1:length(t_samples)
@@ -84,6 +84,16 @@ Y_4 = mode_n_matricization(log_Y, 4);
 [U_4, S_4, V_4] = svd(Y_4, 'econ');
 semilogy(diag(S_4), 'o-')
 
+svd_rank = 5;
+U_4t = U_4(:,1:svd_rank);
+V_4t = V_4(:,1:svd_rank);
+S_4t = S_4(1:svd_rank,1:svd_rank);
+
+rec_Y = U_4t* S_4t * V_4t';
+rec_Y = reshape(rec_Y, size(G));
+G_hat = exp(rec_Y);
+MSE=norm(G_hat-G,'fro')/numel(G);
+disp(MSE)
 %% MLSVD -- Eqn 4
 [C,U1,U2,U3,U4]=mlsvd_4d(log_Y);
 rx = 2; ry = 3; rz = 3; rt = 3;
@@ -133,7 +143,7 @@ end
 %% Reconstruction
 
 [C,U1,U2,U3,U4]=mlsvd_4d(log_Y);
-rx = 3; ry = 4; rz = 4; rt = 4;
+rx = 2; ry = 3; rz = 3; rt = 3;
 %rx = 10; ry = 10; rz = 10; rt = 30;
 
 % Truncation
@@ -150,7 +160,7 @@ rec_logY=mode_n_product(rec_logY,(U4t*U4t'),4);
 
 G_hat=exp(rec_logY);
 
-MSE=norm(G_hat-G,'fro')/norm(G,'fro');
+MSE=norm(G_hat-G,'fro')/numel(G);
 disp(MSE)
 %% Variation of reconstruction
 
