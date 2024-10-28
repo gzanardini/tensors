@@ -7,8 +7,8 @@ clc;
 t_samples = (0:4:120)+eps;
 
 TIC_1 = zeros(10,10,10, length(t_samples));
-k_1 = 0.5 + 0.1.*randn(10,10,10);    %0.5.*ones(10,10,10);   % local diffusion-related parameter (0.35<)
-mu_1 = 30 + randn(10,10,10); % 2.5/k_1 ;    % mean transit time (lambda/k)
+k_1 = 0.5.*ones(10,10,10);   % local diffusion-related parameter (0.35<)
+mu_1 = 30.*ones(10,10,10);         % 2.5/k_1 ;    % mean transit time (lambda/k)
 alpha_1 = 1000;        % scale parameter ()
 
 for idx = 1:length(t_samples) %TIC1
@@ -19,12 +19,12 @@ end
 TIC_2 = zeros(4,4,4, length(t_samples));
 TIC_3 = zeros(4,4,4, length(t_samples));
 
-k_2 = 1 + 0.1.*randn(4,4,4);        %3.*ones(4,4,4); 
-mu_2 = 25 + randn(4,4,4);           % 4.5/k_2 ;  
+k_2 = 3.*ones(4,4,4); 
+mu_2 = 25.*ones(4,4,4);           % 4.5/k_2 ;  
 alpha_2 = 1600;   
 
-k_3 = 2 + 0.1.*randn(4,4,4);  
-mu_3 = 15 + randn(4,4,4);           % 6/k_3;    
+k_3 = 2.*ones(4,4,4);  
+mu_3 = 15.*ones(4,4,4);           % 6/k_3;    
 alpha_3 = 1200;  
 
 for idx = 1:length(t_samples)
@@ -61,7 +61,7 @@ legend()
 hold('off')
 
 %% Noise
-noise_param = 10^5;
+noise_param = 10^1;
 N = raylrnd(noise_param, [10,10,10,length(t_samples)]);
 SNR = snr(G, N);
 Y = (G).*N; 
@@ -89,7 +89,7 @@ semilogy(diag(S_4), 'o-')
 ylabel('\sigma')
 title(['SVD of Y_{(4)} - SNR: ' num2str(SNR)])
 
-svd_rank = 5;
+svd_rank = 7;
 U_4t = U_4(:,1:svd_rank);
 V_4t = V_4(:,1:svd_rank);
 S_4t = S_4(1:svd_rank,1:svd_rank);
@@ -99,16 +99,6 @@ rec_Y = reshape(rec_Y, size(G));
 G_hat = exp(rec_Y);
 MSE=norm(G_hat-G,'fro')/numel(G);
 disp(MSE)
-%% MLSVD -- Eqn 4
-[C,U1,U2,U3,U4]=mlsvd_4d(log_Y);
-rx = 2; ry = 3; rz = 3; rt = 3;
-
-% Truncation
-U1t = U1(:,1:rx); 
-U2t = U2(:,1:ry); 
-U3t = U3(:,1:rz); 
-U4t = U4(:,1:rt);
-Ct = C(1:rx,1:ry,1:rz,1:rt);
 
 %% Score Alg
 rhos = logspace(-5, -3, 50);
@@ -131,8 +121,8 @@ title('Histogram of Unique Vectors - \rho sweep from 10^{-4} to 10^{-3}');
 xtickangle(45); 
 
 %% For different noise realizations
-noise_param = 10^-1;
-rhos = logspace(-4, -1, 100);
+noise_param = 10^1;
+rhos = logspace(-4,-1, 50);
 n_trials = length(rhos);
 ranks=cell(n_trials,100);
 
@@ -144,6 +134,15 @@ for n = 1:100
         ranks{i,n} = score(log_Y, rhos(i))';
     end
 end
+
+string_ranks = cellfun(@(v) mat2str(v), reshape(ranks, [], 1), 'UniformOutput', false);
+figure;
+histogram(categorical(string_ranks)); 
+xlabel('Unique Vectors');
+ylabel('Frequency');
+title('Histogram of Unique Vectors - \rho sweep from 10^{-4} to 10^{-3}');
+xtickangle(45);
+
 
 %% Reconstruction
 
