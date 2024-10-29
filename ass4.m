@@ -1,6 +1,7 @@
 close all;
 clear variables;
 clc;
+format long
 
 %% Generating imaging domain
 
@@ -37,17 +38,18 @@ G = TIC_1;
 G(2:5,2:5,2:5,:) = TIC_2;
 G(2:5,6:9,6:9,:) = TIC_3;
 
-%% Slicing volume visual
-
+%%% visual
 G_test=zeros(10,10,10);
 G_test(2:5,2:5,2:5,:) = 2;
 G_test(2:5,6:9,6:9,:) = 5;
 vol_viz(G_test,'Imaged volume')
+colorbar();
+saveas(gcf,'figures/regions.epsc','epsc');
 
 %% Signal Domain visualization
-
-G_test=G(:,:,:,6);      % for noisy use Y
+G_test=G(:,:,:,4);      % for noisy use Y
 vol_viz(G_test, 'Original signal at 16sec')
+colorbar();
 
 %%  TIC curves
 
@@ -59,13 +61,22 @@ plot(squeeze(G(3,3,3,:)),DisplayName='TIC 2')
 plot(squeeze(G(3,7,7,:)),DisplayName='TIC 3')
 legend()
 hold('off')
+saveas(gcf,'figures/TICs.epsc','epsc')
 
 %% Noise
-noise_param = 10^1;
+
+noise_param = 10^.18;
+
+%%% 10^4.2  SNR -60
+%%% 10^3.18 SNR -40
+%%% 10^2.2  SNR -20
+%%% 10^1.18 SNR 0
+%%% 10^.18  SNR +20
+
 N = raylrnd(noise_param, [10,10,10,length(t_samples)]);
 SNR = snr(G, N);
 Y = (G).*N; 
-
+%%
 figure;
 histogram(Y,'Normalization','pdf')
 title('Y - pdf')
@@ -81,6 +92,7 @@ hist=histogram(log_Y,'Normalization','pdf');
 title('log(Y) - pdf');
 
 %% SVD -- Eqn 3
+
 Y_4 = mode_n_matricization(log_Y, 4);
 [U_4, S_4, V_4] = svd(Y_4, 'econ');
 
@@ -97,6 +109,7 @@ S_4t = S_4(1:svd_rank,1:svd_rank);
 rec_Y = U_4t* S_4t * V_4t';
 rec_Y = reshape(rec_Y, size(G));
 G_hat = exp(rec_Y);
+
 MSE=norm(G_hat-G,'fro')/numel(G);
 disp(MSE)
 
@@ -121,8 +134,9 @@ title('Histogram of Unique Vectors - \rho sweep from 10^{-4} to 10^{-3}');
 xtickangle(45); 
 
 %% For different noise realizations
-noise_param = 10^1;
-rhos = logspace(-4,-1, 50);
+noise_param = 10^4.2;
+%rhos = logspace(-4,-1, 50);
+rhos=[0.01];
 n_trials = length(rhos);
 ranks=cell(n_trials,100);
 
@@ -166,6 +180,8 @@ G_hat=exp(rec_logY);
 
 MSE=norm(G_hat-G,'fro')/numel(G);
 disp(MSE)
+
+vol_viz(G_hat(:,:,:,6),'ReconAAAAA')
 %% Variation of reconstruction
 % 
 % rec_logY=mode_n_product(Ct,U1t,1);
@@ -183,3 +199,76 @@ disp(MSE)
 %%
 
 vol_viz(G_hat(:,:,:,6), 'Reconstructed signal')
+%% calculate scale factor for rayleygh noise given SNR
+
+var_G=var(G(:));
+SNRs=[-60 -50 -40 -30 -20 -10 0 10 20 30 40];
+facs=[];
+for kkk=1:length(SNRs)
+    fac=sqrt(var_G/(0.5*(4-pi)*10^(0.1*SNRs(kkk))));
+    facs=[facs fac];
+    
+end
+%%%% Results for report
+
+%%% Heuristic stuff
+%%% 10^4.2  SNR -60
+%%% 10^3.18 SNR -40
+%%% 10^2.2  SNR -20
+%%% 10^1.18 SNR 0
+%%% 10^.18  SNR +20
+%%% noise_factors=[10^4.2 10^3.18 10^2.2 10^1.18 10^.18];
+
+rho_star=0.01;
+num_trials=100;
+
+noise_factors=facs;
+
+nnn=numel(G);
+
+MSEs=zeros(length(SNRs),num_trials);
+ranks=cell(num_trials,1);
+
+for k=1:length(noise_factors) %% iterate SNR from -60 to +20
+    for n = 1:num_trials    
+            %%% sample the noise
+            N = raylrnd(noise_factors(k), [10,10,10,length(t_samples)]);
+            Y = (G).*N; 
+            log_Y=log(Y+eps);
+    
+            ranks{n} = score(log_Y, rho_star)'; %% rank estimate
+            rx=ranks{n}(1);
+            ry=ranks{n}(2);
+            rz=ranks{n}(3);
+            rt=ranks{n}(3);
+            
+            [C,U1,U2,U3,U4]=mlsvd_4d(log_Y); %% MLSVD of logY
+    
+            %%% truncation
+            U1t = U1(:,1:rx); 
+            U2t = U2(:,1:ry); 
+            U3t = U3(:,1:rz); 
+            U4t = U4(:,1:rt);
+            Ct = C(1:rx,1:ry,1:rz,1:rt);
+            %%% reconstruction
+            rec_logY=mode_n_product(log_Y,(U1t*U1t'),1);
+            rec_logY=mode_n_product(rec_logY,(U2t*U2t'),2);
+            rec_logY=mode_n_product(rec_logY,(U3t*U3t'),3);
+            rec_logY=mode_n_product(rec_logY,(U4t*U4t'),4);
+            
+            G_hat=exp(rec_logY);
+            MSE=norm(G_hat-G,'fro')/nnn;
+    
+            MSEs(k,n)=MSE;
+    end
+end
+
+avgMSE=mean(MSEs,2);
+%%
+figure;
+hold off;
+plot(SNRs,avgMSE+eps,'Marker','O');
+set(gca, 'YScale', 'log') % But you can explicitly force it to be logarithmic
+xlabel('SNR')
+ylabel('avg MSE')
+title('SNR vs MSE')
