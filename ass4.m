@@ -44,7 +44,7 @@ G_test(2:5,2:5,2:5,:) = 2;
 G_test(2:5,6:9,6:9,:) = 5;
 vol_viz(G_test,'Imaged volume')
 colorbar();
-saveas(gcf,'figures/regions.epsc','epsc');
+saveas(gcf,'figures/regions.eps','epsc');
 
 %% Signal Domain visualization
 G_test=G(:,:,:,4);      % for noisy use Y
@@ -61,7 +61,7 @@ plot(squeeze(G(3,3,3,:)),DisplayName='TIC 2')
 plot(squeeze(G(3,7,7,:)),DisplayName='TIC 3')
 legend()
 hold('off')
-saveas(gcf,'figures/TICs.epsc','epsc')
+saveas(gcf,'figures/TICs.eps','epsc')
 
 %% Noise
 
@@ -134,18 +134,26 @@ title('Histogram of Unique Vectors - \rho sweep from 10^{-4} to 10^{-3}');
 xtickangle(45); 
 
 %% For different noise realizations
-noise_param = 10^4.2;
-%rhos = logspace(-4,-1, 50);
-rhos=[0.01];
-n_trials = length(rhos);
-ranks=cell(n_trials,100);
+SNRs=[-60 -50 -40 -30 -20 -10 0 10 20];
+noise_factors=[];
 
-for n = 1:100
-    for i = 1:length(rhos)
-        N = raylrnd(noise_param, [10,10,10,length(t_samples)]);
+for k=1:length(SNRs)
+    fac=sqrt(var_G/(0.5*(4-pi)*10^(0.1*SNRs(k))));
+    noise_factors=[noise_factors fac];
+    
+end
+
+rho=0.01;
+n_trials = 100;
+
+ranks=cell(length(noise_factors),n_trials);
+
+for i = 1:length(noise_factors)
+    for k=1:n_trials
+        N = raylrnd(noise_factors(i), [10,10,10,length(t_samples)]);
         Y = (G).*N; 
         log_Y=log(Y+ eps);
-        ranks{i,n} = score(log_Y, rhos(i))';
+        ranks{i,n} = score(log_Y, rho)';
     end
 end
 
@@ -202,14 +210,6 @@ vol_viz(G_hat(:,:,:,6), 'Reconstructed signal')
 %% calculate scale factor for rayleygh noise given SNR
 
 var_G=var(G(:));
-SNRs=[-60 -50 -40 -30 -20 -10 0 10 20 30 40];
-facs=[];
-for kkk=1:length(SNRs)
-    fac=sqrt(var_G/(0.5*(4-pi)*10^(0.1*SNRs(kkk))));
-    facs=[facs fac];
-    
-end
-%%%% Results for report
 
 %%% Heuristic stuff
 %%% 10^4.2  SNR -60
@@ -219,15 +219,28 @@ end
 %%% 10^.18  SNR +20
 %%% noise_factors=[10^4.2 10^3.18 10^2.2 10^1.18 10^.18];
 
+SNRs=[-60 -50 -40 -30 -20 -10 0 10 20];
+noise_factors=[];
+
+for k=1:length(SNRs)
+    fac=sqrt(var_G/(0.5*(4-pi)*10^(0.1*SNRs(k))));
+    noise_factors=[noise_factors fac];
+    
+end
+
+%%%% Results for report
+
+
 rho_star=0.01;
-num_trials=100;
+num_trials=10;
 
-noise_factors=facs;
-
-nnn=numel(G);
+numel_G=numel(G);
 
 MSEs=zeros(length(SNRs),num_trials);
-ranks=cell(num_trials,1);
+ranks=cell(length(SNRs),num_trials);
+rell_errs=zeros(length(SNRs),num_trials);
+
+norm_G=norm(G,'fro');
 
 for k=1:length(noise_factors) %% iterate SNR from -60 to +20
     for n = 1:num_trials    
@@ -236,11 +249,12 @@ for k=1:length(noise_factors) %% iterate SNR from -60 to +20
             Y = (G).*N; 
             log_Y=log(Y+eps);
     
-            ranks{n} = score(log_Y, rho_star)'; %% rank estimate
-            rx=ranks{n}(1);
-            ry=ranks{n}(2);
-            rz=ranks{n}(3);
-            rt=ranks{n}(3);
+            ranks{k,n} = score(log_Y, rho_star)'; %% rank estimate
+
+            rx=ranks{k,n}(1);
+            ry=ranks{k,n}(2);
+            rz=ranks{k,n}(3);
+            rt=ranks{k,n}(4);            
             
             [C,U1,U2,U3,U4]=mlsvd_4d(log_Y); %% MLSVD of logY
     
@@ -250,6 +264,7 @@ for k=1:length(noise_factors) %% iterate SNR from -60 to +20
             U3t = U3(:,1:rz); 
             U4t = U4(:,1:rt);
             Ct = C(1:rx,1:ry,1:rz,1:rt);
+
             %%% reconstruction
             rec_logY=mode_n_product(log_Y,(U1t*U1t'),1);
             rec_logY=mode_n_product(rec_logY,(U2t*U2t'),2);
@@ -257,18 +272,31 @@ for k=1:length(noise_factors) %% iterate SNR from -60 to +20
             rec_logY=mode_n_product(rec_logY,(U4t*U4t'),4);
             
             G_hat=exp(rec_logY);
-            MSE=norm(G_hat-G,'fro')/nnn;
-    
-            MSEs(k,n)=MSE;
+
+            rell_errs(k,n)=norm(G_hat-G,'fro')/norm_G;
+            MSEs(k,n)=norm(G_hat-G,'fro')/numel_G;
+
     end
 end
 
 avgMSE=mean(MSEs,2);
+avgRel_errs=mean(rell_errs,2);
+
 %%
 figure;
 hold off;
 plot(SNRs,avgMSE+eps,'Marker','O');
-set(gca, 'YScale', 'log') % But you can explicitly force it to be logarithmic
+set(gca, 'YScale', 'log') 
 xlabel('SNR')
 ylabel('avg MSE')
-title('SNR vs MSE')
+title('avgMSE vs SNR - 1000 runs')
+saveas(gcf,'figures/mse vs snr.eps','epsc')
+
+figure;
+plot(SNRs,avgRel_errs, 'Marker', 'O');
+set(gca, 'YScale','log')
+xlabel('SNR')
+ylabel('Relative Reconstruction error');
+title('avg Relative error vs SNR - 1000 runs')
+saveas(gcf,'figures/relerrs.eps','epsc')
+
