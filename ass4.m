@@ -55,17 +55,17 @@ colorbar();
 
 figure;
 hold('on')
-title('TIC Curves in each region')
+title('TIC in each region of the clean signal')
 plot(squeeze(G(1,1,1,:)),DisplayName='TIC 1')
 plot(squeeze(G(3,3,3,:)),DisplayName='TIC 2')
 plot(squeeze(G(3,7,7,:)),DisplayName='TIC 3')
 legend()
 hold('off')
-saveas(gcf,'figures/TICs.eps','epsc')
+%saveas(gcf,'figures/TICs.eps','epsc')
 
 %% Noise
 
-noise_param = 10^.18;
+noise_param = 10^3.18;
 
 %%% 10^4.2  SNR -60
 %%% 10^3.18 SNR -40
@@ -73,13 +73,22 @@ noise_param = 10^.18;
 %%% 10^1.18 SNR 0
 %%% 10^.18  SNR +20
 
-N = raylrnd(noise_param, [10,10,10,length(t_samples)]);
+N = raylrnd(noise_factors(3), [10,10,10,length(t_samples)]);
 SNR = snr(G, N);
 Y = (G).*N; 
 
 G_test=Y(:,:,:,6);   
 vol_viz(G_test, 'Noisy signal at 20sec')
 colorbar();
+
+figure;
+hold('on')
+title(['TIC in each region of the noisy signal - SNR: ' num2str(SNRs(3))])
+plot(squeeze(Y(1,1,1,:)),DisplayName='TIC 1')
+plot(squeeze(Y(3,3,3,:)),DisplayName='TIC 2')
+plot(squeeze(Y(3,7,7,:)),DisplayName='TIC 3')
+legend()
+hold('off')
 %%
 figure;
 histogram(Y,'Normalization','pdf')
@@ -112,10 +121,19 @@ S_4t = S_4(1:svd_rank,1:svd_rank);
 
 rec_Y = U_4t* S_4t * V_4t';
 rec_Y = reshape(rec_Y, size(G));
-G_hat = exp(rec_Y);
+G_hat_SVD = exp(rec_Y);
 
-MSE=norm(G_hat-G,'fro')/numel(G);
+MSE=norm(G_hat_SVD-G,'fro')/numel(G);
 disp(MSE)
+
+figure;
+hold('on')
+title(['TIC in each region of the reconstructed signal using SVD - SNR: ' num2str(SNRs(3))])
+plot(squeeze(G_hat_SVD(1,1,1,:)),DisplayName='TIC 1')
+plot(squeeze(G_hat_SVD(3,3,3,:)),DisplayName='TIC 2')
+plot(squeeze(G_hat_SVD(3,7,7,:)),DisplayName='TIC 3')
+legend()
+hold('off')
 
 %% SVD For different SNRs
 
@@ -127,11 +145,11 @@ for kkk=1:length(SNRs)
     facs=[facs fac];
     
 end
-n_trials=100;
+n_trials=10;
 noise_factors=facs;
 nnn=numel(G);
 svd_rank = 3;
-MSE = zeros(length(SNRs), n_trials);
+MSE_SVD = zeros(length(SNRs), n_trials);
 
 for k=1:length(noise_factors) %% iterate SNR from -60 to +20
     for n = 1:n_trials    
@@ -155,6 +173,40 @@ for k=1:length(noise_factors) %% iterate SNR from -60 to +20
 end
 avgMSE_SVD=mean(MSE_SVD,2);
 
+%% MLSVD -- Eqn 4
+% Singular values of each mode
+X = log_Y; 
+[~, S_1, ~] = svd(mode_n_matricization(X, 1), 'econ');
+[~, S_2, ~] = svd(mode_n_matricization(X, 2), 'econ');
+[~, S_3, ~] = svd(mode_n_matricization(X, 3), 'econ');
+[~, S_4, ~] = svd(mode_n_matricization(X, 4), 'econ');
+
+hold on;
+subplot(411)
+plot(diag(S_1), 'o-', DisplayName='Mode 1')
+ylabel('\sigma')
+title(['\Sigma_{(1)} - SNR: ' num2str(SNRs(3))])
+set(gca, 'YScale','log')
+
+subplot(412)
+plot(diag(S_2), 'o-', DisplayName='Mode 2')
+ylabel('\sigma')
+title(['\Sigma_{(2)} - SNR: ' num2str(SNRs(3))])
+set(gca, 'YScale','log')
+
+subplot(413)
+plot(diag(S_3), 'o-', DisplayName='Mode 3')
+ylabel('\sigma')
+title(['\Sigma_{(3)} - SNR: ' num2str(SNRs(3))])
+set(gca, 'YScale','log')
+
+subplot(414)
+plot(diag(S_4), 'o-', DisplayName='Mode 4')
+set(gca, 'YScale','log')
+xlim([1 31])
+ylabel('\sigma')
+title(['\Sigma_{(4)} - SNR: ' num2str(SNRs(3))])
+hold off;
 %% Score Alg
 rhos = logspace(-5, -3, 50);
 n_trials = length(rhos);
@@ -226,12 +278,21 @@ rec_logY=mode_n_product(rec_logY,(U2t*U2t'),2);
 rec_logY=mode_n_product(rec_logY,(U3t*U3t'),3);
 rec_logY=mode_n_product(rec_logY,(U4t*U4t'),4);
 
-G_hat=exp(rec_logY);
+G_hat_MLSVD=exp(rec_logY);
 
-MSE=norm(G_hat-G,'fro')/numel(G);
+MSE=norm(G_hat_MLSVD-G,'fro')/numel(G);
 disp(MSE)
 
-vol_viz(G_hat(:,:,:,6),'Reonstructed signal at 16 sec')
+%vol_viz(G_hat(:,:,:,6),'Reonstructed signal at 16 sec')
+
+figure;
+hold('on')
+title(['TIC in each region of the reconstructed signal - SNR: ' num2str(SNRs(3))])
+plot(squeeze(G_hat_MLSVD(1,1,1,:)),DisplayName='TIC 1')
+plot(squeeze(G_hat_MLSVD(3,3,3,:)),DisplayName='TIC 2')
+plot(squeeze(G_hat_MLSVD(3,7,7,:)),DisplayName='TIC 3')
+legend()
+hold('off')
 %% Variation of reconstruction
 % 
 % rec_logY=mode_n_product(Ct,U1t,1);
@@ -328,8 +389,10 @@ avgRel_errs=mean(rell_errs,2);
 figure;
 hold on;
 plot(SNRs,avgMSE+eps,'Marker','O',DisplayName='MLSVD + SCORE');
+set(gca, 'YScale', 'log') 
 plot(SNRs,avgMSE_SVD,'Marker','O',DisplayName='SVD');
 set(gca, 'YScale', 'log') 
+legend()
 xlabel('SNR')
 ylabel('avg MSE')
 title('avgMSE vs SNR - 1000 runs')
@@ -342,4 +405,13 @@ xlabel('SNR')
 ylabel('Relative Reconstruction error');
 title('avg Relative error vs SNR - 1000 runs')
 saveas(gcf,'figures/relerrs.eps','epsc')
+
+%% Correlation
+G_4 = mode_n_matricization(G, 4);
+G_SVD_4 = mode_n_matricization(G_hat_SVD, 4);
+G_MLSVD_4 = mode_n_matricization(G_hat_MLSVD, 4);
+corr1 = round(corr(G(:), G_hat_SVD(:)), 3);
+corr2 = round(corr(G(:), G_hat_MLSVD(:)), 3);
+
+
 
