@@ -47,8 +47,8 @@ colorbar();
 saveas(gcf,'figures/regions.epsc','epsc');
 
 %% Signal Domain visualization
-G_test=G(:,:,:,4);      % for noisy use Y
-vol_viz(G_test, 'Original signal at 16sec')
+G_test=G(:,:,:,6);      % for noisy use Y
+vol_viz(G_test, 'Original signal at 20sec')
 colorbar();
 
 %%  TIC curves
@@ -76,6 +76,10 @@ noise_param = 10^.18;
 N = raylrnd(noise_param, [10,10,10,length(t_samples)]);
 SNR = snr(G, N);
 Y = (G).*N; 
+
+G_test=Y(:,:,:,6);   
+vol_viz(G_test, 'Noisy signal at 20sec')
+colorbar();
 %%
 figure;
 histogram(Y,'Normalization','pdf')
@@ -101,7 +105,7 @@ semilogy(diag(S_4), 'o-')
 ylabel('\sigma')
 title(['SVD of Y_{(4)} - SNR: ' num2str(SNR)])
 
-svd_rank = 7;
+svd_rank = 3;
 U_4t = U_4(:,1:svd_rank);
 V_4t = V_4(:,1:svd_rank);
 S_4t = S_4(1:svd_rank,1:svd_rank);
@@ -112,6 +116,44 @@ G_hat = exp(rec_Y);
 
 MSE=norm(G_hat-G,'fro')/numel(G);
 disp(MSE)
+
+%% SVD For different SNRs
+
+var_G=var(G(:));
+SNRs=[-60 -50 -40 -30 -20 -10 0 10 20];
+facs=[];
+for kkk=1:length(SNRs)
+    fac=sqrt(var_G/(0.5*(4-pi)*10^(0.1*SNRs(kkk))));
+    facs=[facs fac];
+    
+end
+n_trials=100;
+noise_factors=facs;
+nnn=numel(G);
+svd_rank = 3;
+MSE = zeros(length(SNRs), n_trials);
+
+for k=1:length(noise_factors) %% iterate SNR from -60 to +20
+    for n = 1:n_trials    
+            %%% sample the noise
+            N = raylrnd(noise_factors(k), [10,10,10,length(t_samples)]);
+            Y = (G).*N; 
+            log_Y=log(Y+eps);
+            Y_4 = mode_n_matricization(log_Y, 4);
+            [U_4, S_4, V_4] = svd(Y_4, 'econ');
+            U_4t = U_4(:,1:svd_rank);
+            V_4t = V_4(:,1:svd_rank);
+            S_4t = S_4(1:svd_rank,1:svd_rank);
+            
+            rec_Y = U_4t* S_4t * V_4t';
+            rec_Y = reshape(rec_Y, size(G));
+            G_hat = exp(rec_Y);
+            
+            MSE_SVD(k,n)=norm(G_hat-G,'fro')/numel(G);
+            
+    end
+end
+avgMSE_SVD=mean(MSE_SVD,2);
 
 %% Score Alg
 rhos = logspace(-5, -3, 50);
@@ -181,7 +223,7 @@ G_hat=exp(rec_logY);
 MSE=norm(G_hat-G,'fro')/numel(G);
 disp(MSE)
 
-vol_viz(G_hat(:,:,:,6),'ReconAAAAA')
+vol_viz(G_hat(:,:,:,6),'Reonstructed signal at 16 sec')
 %% Variation of reconstruction
 % 
 % rec_logY=mode_n_product(Ct,U1t,1);
@@ -199,7 +241,7 @@ vol_viz(G_hat(:,:,:,6),'ReconAAAAA')
 %%
 
 vol_viz(G_hat(:,:,:,6), 'Reconstructed signal')
-%% calculate scale factor for rayleygh noise given SNR
+%% calculate scale factor for rayleigh noise given SNR
 
 var_G=var(G(:));
 SNRs=[-60 -50 -40 -30 -20 -10 0 10 20 30 40];
@@ -266,9 +308,11 @@ end
 avgMSE=mean(MSEs,2);
 %%
 figure;
-hold off;
-plot(SNRs,avgMSE+eps,'Marker','O');
+hold on;
+plot(SNRs,avgMSE+eps,'Marker','O',DisplayName='MLSVD + SCORE');
+plot(SNRs,avgMSE_SVD,'Marker','O',DisplayName='SVD');
 set(gca, 'YScale', 'log') % But you can explicitly force it to be logarithmic
 xlabel('SNR')
 ylabel('avg MSE')
 title('SNR vs MSE')
+hold off;
